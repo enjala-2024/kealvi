@@ -26,6 +26,15 @@ export async function POST(req: Request) {
     .select()
     .single();
 
-  if (error) return Response.json({ error: error.message }, { status: 500 });
-  return Response.json(data);
+  //if (error) return Response.json({ error: error.message }, { status: 500 });
+  ///return Response.json(data);
+//}
+if (error) {
+  console.log("INSERT ERROR:", error);
+  return Response.json(
+    { error: error.message, details: error },
+    { status: 500 }
+  );
+  
 }
+return Response.json(data);}

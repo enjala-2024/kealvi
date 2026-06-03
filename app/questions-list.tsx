@@ -47,9 +47,22 @@ export default function QuestionsList({
     const res = await fetch("/api/questions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body: draft }),
+      
+      body: JSON.stringify({
+  body: draft,
+  author: "Anonymous",
+}),
     });
-    const created = await res.json();
+    //const created = await res.json();
+    const text = await res.text();
+console.log("API RESPONSE:", text);
+
+if (!res.ok) {
+  alert(text);
+  return;
+}
+
+const created = JSON.parse(text);
 
     setQuestions((qs) => [{ ...created, votes: 0 }, ...qs]);
     setDraft("");
@@ -83,7 +96,7 @@ export default function QuestionsList({
     setHasMore(data.hasMore);
     setLoading(false);
   }
-
+console.log(questions);
   return (
     <div className="space-y-5">
       {/* Ask box */}

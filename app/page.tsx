@@ -23,6 +23,14 @@ export default async function Page() {
         </p>
       </header>
       <QuestionsList initialQuestions={questions} initialHasMore={hasMore} />
+      <div className="mt-8">
+  <a
+    href="/polls"
+    className="rounded-xl bg-brand px-4 py-2 text-white"
+  >
+    Open Polls
+  </a>
+</div>
     </main>
   );
 }
