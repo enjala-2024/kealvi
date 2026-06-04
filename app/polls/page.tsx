@@ -83,7 +83,8 @@ setOption2("");
         {polls.map((poll: any) => (
           <div
             key={poll.id}
-            className="rounded border p-4"
+            //className="rounded border p-4"
+            className="border border-gray-200 rounded-xl p-5 shadow-sm bg-white hover:shadow-md transition"
           >
             <h2 className="font-semibold">
               {poll.question}
@@ -92,7 +93,8 @@ setOption2("");
   {poll.poll_options?.map((option: any) => (
   <div
     key={option.id}
-    className="flex items-center justify-between rounded border p-2"
+    //className="flex items-center justify-between rounded border p-2"
+    className="flex items-center justify-between rounded-lg border border-gray-200 p-3 hover:bg-gray-50"
   >
     <div>
       <p>{option.option_text}</p>
