@@ -1,5 +1,8 @@
 "use client";
 
+
+
+import { getUserId } from "@/lib/getUserId";
 import { useState, useEffect } from "react";
 
 export default function PollsPage() {
@@ -8,6 +11,7 @@ export default function PollsPage() {
 const [question, setQuestion] = useState("");
 const [option1, setOption1] = useState("");
 const [option2, setOption2] = useState("");
+const [userVotes, setUserVotes] = useState<Record<string, string>>({});
   async function loadPolls() {
     const res = await fetch("/api/polls");
     const data = await res.json();
@@ -34,9 +38,62 @@ setOption1("");
 setOption2("");
     loadPolls();
   }
+  /*const handleVote = async (optionId: string, pollId: string) => {
+  await fetch(`/api/polls/${pollId}/vote`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      optionId,
+      voterId: getUserId(),
+    }),
+  });
 
+  loadPolls();
+};*/
+const handleVote = async (optionId: string, pollId: string) => {
+  setUserVotes((prev) => ({
+    ...prev,
+    [pollId]: optionId,
+  }));
+await fetch(`/api/polls/${pollId}/vote`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    optionId: optionId,
+    userId: getUserId(),
+  }),
+});
+ /* await fetch(`/api/polls/${pollId}/vote`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      optionId,
+      voterId: getUserId(),
+    }),
+  });*/
+
+  loadPolls();
+};
+async function loadUserVotes() {
+  const voterId = getUserId();
+
+  const res = await fetch(`/api/user-votes?voterId=${voterId}`);
+  const data = await res.json();
+
+  // convert to map: { pollId: optionId }
+  const map: Record<string, string> = {};
+
+  data.votes.forEach((v: any) => {
+    map[v.question_id] = v.option_id;
+  });
+
+  setUserVotes(map);
+}
   useEffect(() => {
     loadPolls();
+    loadUserVotes();
   }, []);
 
   return (
@@ -90,37 +147,53 @@ setOption2("");
               {poll.question}
             </h2>
             <div className="space-y-2">
-  {poll.poll_options?.map((option: any) => (
-  <div
-    key={option.id}
-    //className="flex items-center justify-between rounded border p-2"
-    className="flex items-center justify-between rounded-lg border border-gray-200 p-3 hover:bg-gray-50"
-  >
-    <div>
-      <p>{option.option_text}</p>
-      <p className="text-sm text-gray-500">
-        {option.votes} votes
-      </p>
-    </div>
+               {poll.poll_options?.map((option: any) => {
+  const isSelected = userVotes?.[poll.id] === option.id;
 
-    <button
-      onClick={async () => {
-        await fetch(`/api/polls/${option.id}/vote`, {
-          method: "POST",
-        });
+  const totalVotes = poll.poll_options.reduce(
+    (sum: number, opt: any) => sum + (opt.votes || 0),
+    0
+  );
 
-        loadPolls();
-      }}
-      className="rounded bg-blue-600 px-3 py-1 text-white"
+  const percent = totalVotes
+    ? Math.round((option.votes / totalVotes) * 100)
+    : 0;
+
+  return (
+    <div
+      key={option.id}
+      onClick={() => handleVote(option.id, poll.id)}
+      className={`relative cursor-pointer overflow-hidden rounded-xl border p-3 transition ${
+        isSelected
+          ? "border-blue-500 bg-blue-50"
+          : "border-gray-200 hover:bg-gray-50"
+      }`}
     >
-      Vote
-    </button>
-  </div>
-))}
-</div>
-          </div>
-        ))}
+      {/* 🔵 progress background */}
+      <div
+        className="absolute left-0 top-0 h-full bg-blue-100 transition-all"
+        style={{ width: `${percent}%` }}
+      />
+
+      {/* content */}
+      <div className="relative flex justify-between items-center">
+        <div>
+          <p className="font-medium">{option.option_text}</p>
+          <p className="text-sm text-gray-500">{option.votes} votes</p>
+        </div>
+
+        <span className="text-sm font-semibold text-gray-600">
+          {percent}%
+        </span>
       </div>
+    </div>
+  );
+})}
+
+         </div>
+    </div>
+  ))}
+</div>
     </main>
   );
-}
+}    
