@@ -1,12 +1,14 @@
 "use client";
-import { useState, useEffect } from "react";
-import { getVoterId } from "@/lib/voter";
 
+import { getVoterId } from "@/lib/voter";
+import { useState, useEffect, useRef } from "react";
 type Question = {
   id: string;
   body: string;
   author: string | null;
   votes: number;
+  created_at: string;
+   attachment_url?: string | null;
 };
 
 export default function QuestionsList({
@@ -21,7 +23,9 @@ export default function QuestionsList({
   const [query, setQuery] = useState("");
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loading, setLoading] = useState(false);
-
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+const [sortBy, setSortBy] = useState("top");
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
 
@@ -43,7 +47,40 @@ export default function QuestionsList({
 
   async function submit() {
     if (!draft.trim()) return;
+   /* let attachmentUrl = null;
 
+if (file) {
+  const filename = `${Date.now()}-${file.name}`;
+
+  const { error } = await supabase.storage
+    .from("question-attachments")
+    .upload(filename, file);
+
+  if (!error) {
+    const { data } = supabase.storage
+      .from("question-attachments")
+      .getPublicUrl(filename);
+
+    attachmentUrl = data.publicUrl;
+  }
+}*/
+let attachmentUrl = null;
+
+if (file) {
+  const formData = new FormData();
+
+  formData.append("file", file);
+
+  const uploadRes = await fetch("/api/upload", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (uploadRes.ok) {
+    const uploaded = await uploadRes.json();
+    attachmentUrl = uploaded.url;
+  }
+}
     const res = await fetch("/api/questions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -51,6 +88,7 @@ export default function QuestionsList({
       body: JSON.stringify({
   body: draft,
   author: "Anonymous",
+  attachment_url: attachmentUrl,
 }),
     });
     //const created = await res.json();
@@ -66,13 +104,24 @@ const created = JSON.parse(text);
 
     setQuestions((qs) => [{ ...created, votes: 0 }, ...qs]);
     setDraft("");
+    setFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }
 
   async function upvote(id: string) {
     // optimistic: assume success, update the UI now
-    setQuestions((qs) =>
+    /*setQuestions((qs) =>
       qs.map((q) => (q.id === id ? { ...q, votes: q.votes + 1 } : q))
-    );
+    );*/
+    setQuestions((qs) =>
+  qs
+    .map((q) =>
+      q.id === id ? { ...q, votes: q.votes + 1 } : q
+    )
+    .sort((a, b) => b.votes - a.votes)
+);
 
     const res = await fetch(`/api/questions/${id}/vote`, {
       method: "POST",
@@ -87,6 +136,31 @@ const created = JSON.parse(text);
       );
     }
   }
+  async function downvote(id: string) {
+  setQuestions((qs) =>
+    qs
+      .map((q) =>
+        q.id === id
+          ? { ...q, votes: Math.max(0, q.votes - 1) }
+          : q
+      )
+      .sort((a, b) => b.votes - a.votes)
+  );
+
+  const res = await fetch(`/api/questions/${id}/unvote`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      voterId: getVoterId(),
+    }),
+  });
+
+  if (!res.ok) {
+    location.reload();
+  }
+}
 
   async function loadMore() {
     setLoading(true);
@@ -97,18 +171,76 @@ const created = JSON.parse(text);
     setLoading(false);
   }
 console.log(questions);
+const sortedQuestions = [...questions].sort((a, b) => {
+  if (sortBy === "top") {
+    return b.votes - a.votes;
+  }
+
+  return (
+    new Date(b.created_at).getTime() -
+    new Date(a.created_at).getTime()
+  );
+});
   return (
     <div className="space-y-5">
       {/* Ask box */}
       <div className="rounded-2xl border bg-surface p-4 shadow-sm">
         <div className="flex gap-2">
-          <input
+          {/*<input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
+            <input
+              type="file"
+                   onChange={(e) => setFile(e.target.files?.[0] || null)}
+                   className="text-sm"
+                      />
             onKeyDown={(e) => e.key === "Enter" && submit()}
             placeholder="Ask a question…"
             className="flex-1 rounded-xl border bg-background px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-brand"
-          />
+          />*/}
+          <div className="flex flex-col gap-2 flex-1">
+  <input
+    value={draft}
+    onChange={(e) => setDraft(e.target.value)}
+    onKeyDown={(e) => e.key === "Enter" && submit()}
+    placeholder="Ask a question…"
+    className="flex-1 rounded-xl border bg-background px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-brand"
+  />
+{/*<input
+    type="file"
+    accept="image/*,.pdf"
+    onChange={(e) => setFile(e.target.files?.[0] || null)}
+    className="text-sm"
+  />*/}
+  {/*<input
+    type="file"
+    onChange={(e) => setFile(e.target.files?.[0] || null)}
+    className="text-sm"
+  />*/}
+  <div>
+  <label
+    htmlFor="file-upload"
+    className="inline-block cursor-pointer rounded-xl border px-4 py-2 text-sm hover:bg-gray-100"
+  >
+    📎 Attach File
+  </label>
+
+  <input
+  ref={fileInputRef}
+    id="file-upload"
+    type="file"
+    accept="image/*,.pdf"
+    onChange={(e) => setFile(e.target.files?.[0] || null)}
+     className="hidden"
+  />
+
+  {file && (
+    <p className="mt-1 text-xs text-muted">
+      Selected: {file.name}
+    </p>
+  )}
+</div>
+</div>
           <button
             onClick={submit}
             className="rounded-xl bg-brand px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-strong"
@@ -119,26 +251,48 @@ console.log(questions);
       </div>
 
       {/* Search + hydration status */}
-      <div className="flex items-center gap-3">
+      {/* <div className="flex items-center gap-3">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search questions…"
-          className="w-full flex-1 rounded-xl border bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-brand"
+          placeholder="Search questions…"*/}
+          <div className="flex items-center gap-3">
+  <input
+    value={query}
+    onChange={(e) => setQuery(e.target.value)}
+    placeholder="Search questions…"
+    className="w-full flex-1 rounded-xl border bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-brand"
+  />
+
+  <select
+    value={sortBy}
+    onChange={(e) => setSortBy(e.target.value)}
+    className="rounded-xl border bg-surface px-3 py-2 text-sm"
+  >
+    <option value="top">🔥 Top Questions</option>
+    <option value="newest">🕒 Newest</option>
+  </select>
+
+  <span className="shrink-0 text-xs text-muted">
+    {hydrated ? "Interactive ✓" : "Loading interactivity…"}
+  </span>
+</div>
+         {/* className="w-full flex-1 rounded-xl border bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-brand"
         />
         <span className="shrink-0 text-xs text-muted">
           {hydrated ? "Interactive ✓" : "Loading interactivity…"}
         </span>
-      </div>
+      </div>*/}
 
       {/* Questions */}
       <ul className="space-y-3">
-        {questions.map((q) => (
+        {/*questions.map((q) => (*/}
+        {sortedQuestions.map((q) => (
           <li
             key={q.id}
             className="flex items-start gap-3 rounded-2xl border bg-surface p-4 shadow-sm transition-shadow hover:shadow-md"
           >
-            <button
+           {/*} <button
               onClick={() => upvote(q.id)}
               className="flex shrink-0 flex-col items-center gap-0.5 rounded-xl border px-3.5 py-2 text-brand transition-colors hover:border-brand hover:bg-brand-soft"
             >
@@ -146,9 +300,65 @@ console.log(questions);
               <span className="text-sm font-semibold leading-none tabular-nums">
                 {q.votes}
               </span>
-            </button>
+            </button>*/}
+            <div className="flex shrink-0 flex-col items-center gap-1 rounded-xl border px-3 py-2">
+  <button
+    onClick={() => upvote(q.id)}
+    className="text-brand hover:scale-110"
+  >
+    ▲
+  </button>
+
+  <span className="text-sm font-semibold tabular-nums">
+    {q.votes}
+  </span>
+
+  <button
+    onClick={() => downvote(q.id)}
+    className="text-brand hover:scale-110"
+  >
+    ▼
+  </button>
+</div>
             <div className="min-w-0 flex-1 pt-0.5">
-              <p className="leading-snug">{q.body}</p>
+             {/* <p className="leading-snug">{q.body}</p>
+              q.attachment_url && (
+  <a
+    href={q.attachment_url}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="mt-2 block text-sm text-blue-600 underline"
+  >
+    View Attachment
+  </a>
+)}*/}
+<p className="leading-snug">{q.body}</p>
+
+{q.attachment_url && (
+  <>
+    {q.attachment_url.toLowerCase().includes(".pdf") ? (
+      <a
+        href={q.attachment_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-2 block text-blue-600 underline"
+      >
+        📄 View PDF
+      </a>
+    ) : (
+      <img
+        src={q.attachment_url}
+        alt="attachment"
+        className="mt-2 max-h-64 rounded-lg border"
+      />
+    )}
+  </>
+)}
+
+{/*{q.author && (
+  <p className="mt-1.5 text-xs text-muted">{q.author}</p>
+)}*/}
+
               {q.author && (
                 <p className="mt-1.5 text-xs text-muted">{q.author}</p>
               )}
