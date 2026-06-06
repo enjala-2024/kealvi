@@ -20,6 +20,7 @@ export default function QuestionsList({
 }) {
   const [questions, setQuestions] = useState(initialQuestions);
   const [draft, setDraft] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const [query, setQuery] = useState("");
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loading, setLoading] = useState(false);
@@ -95,12 +96,20 @@ if (file) {
     const text = await res.text();
 console.log("API RESPONSE:", text);
 
-if (!res.ok) {
+/*if (!res.ok) {
   alert(text);
+  return;
+}*/
+if (!res.ok) {
+  const error = JSON.parse(text);
+
+  setErrorMessage(error.error);
+
   return;
 }
 
 const created = JSON.parse(text);
+setErrorMessage("");
 
     setQuestions((qs) => [{ ...created, votes: 0 }, ...qs]);
     setDraft("");
@@ -206,6 +215,11 @@ const sortedQuestions = [...questions].sort((a, b) => {
     placeholder="Ask a question…"
     className="flex-1 rounded-xl border bg-background px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-brand"
   />
+  {errorMessage && (
+  <p className="mt-2 text-sm text-red-600">
+    ⚠️ {errorMessage}
+  </p>
+)}
 {/*<input
     type="file"
     accept="image/*,.pdf"

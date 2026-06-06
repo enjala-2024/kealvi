@@ -19,7 +19,19 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const { body, author,attachment_url } = await req.json();
+const { data: existing } = await supabase
+  .from("questions")
+  .select("id")
+  /*.ilike("body", body.trim())*/
+  .ilike("body", body.trim().replace(/\s+/g, " "))
+  .maybeSingle();
 
+if (existing) {
+  return Response.json(
+    { error: "This question already exists." },
+    { status: 409 }
+  );
+}
   const { data, error } = await supabase
     .from("questions")
     .insert({ body, author , attachment_url,})
