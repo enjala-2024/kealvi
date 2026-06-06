@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { getQuestionsPage, searchQuestions } from "@/lib/questions";
-
+import { normalizeQuestion } from "@/lib/ai";
+import { findDuplicate } from "@/lib/duplicate-check";
 const PAGE_SIZE = 10;
 
 export async function GET(req: Request) {
@@ -19,22 +20,65 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const { body, author,attachment_url } = await req.json();
+  const normalizedBody = await normalizeQuestion(body);
+  /*const normalizedBody = await normalizeQuestion(body);
 const { data: existing } = await supabase
   .from("questions")
   .select("id")
   /*.ilike("body", body.trim())*/
-  .ilike("body", body.trim().replace(/\s+/g, " "))
-  .maybeSingle();
+  /*.ilike("body", body.trim().replace(/\s+/g, " "))*/
+  /*.ilike("body", normalizedBody)*/
+  /*.maybeSingle();
 
 if (existing) {
   return Response.json(
     { error: "This question already exists." },
     { status: 409 }
   );
+}*/
+const { data: questions } = await supabase
+  .from("questions")
+  .select("body");
+ /* const duplicate = await findDuplicate(
+  body,
+  (questions ?? []).map((q) => q.body)
+);
+if (duplicate !== "NONE") {
+  return Response.json(
+    {
+      error: "Similar question already exists.",
+      existingQuestion: duplicate,
+    },
+    { status: 409 }
+  );
+}*/
+let duplicate = "NONE";
+
+try {
+  duplicate = await findDuplicate(
+    body,
+    (questions ?? []).map((q) => q.body)
+  );
+} catch (err) {
+  console.error("Duplicate check failed:", err);
+
+  // IMPORTANT: fallback = allow request
+  duplicate = "NONE";
 }
+
+if (duplicate !== "NONE") {
+  return Response.json(
+    {
+      error: "Similar question already exists.",
+      existingQuestion: duplicate,
+    },
+    { status: 409 }
+  );
+}
+
   const { data, error } = await supabase
     .from("questions")
-    .insert({ body, author , attachment_url,})
+    .insert({ body: normalizedBody, author , attachment_url,})
     .select()
     .single();
 

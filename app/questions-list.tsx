@@ -102,7 +102,7 @@ console.log("API RESPONSE:", text);
 }*/
 if (!res.ok) {
   const error = JSON.parse(text);
-
+console.log("Response text:", text);
   setErrorMessage(error.error);
 
   return;
