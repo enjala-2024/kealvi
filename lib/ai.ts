@@ -7,26 +7,42 @@ const ai = new GoogleGenAI({
 export async function normalizeQuestion(question: string) {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-pro", // better accuracy than flash
+
       contents: `
-Convert this question into a standard, clear Q&A format.
+You are a strict question normalizer for a Q&A platform.
 
-Examples:
-"how to redeploy"
-→ "How do I redeploy an application?"
+TASK:
+Rewrite the input into a clear, standard English question.
 
-"how can we redeploy"
-→ "How do I redeploy an application?"
+RULES:
+- Keep original meaning EXACT
+- Do NOT add new information
+- Do NOT change intent
+- Output ONLY one sentence
+- Must be a proper question
+- No explanations, no extra text
 
-Return ONLY the normalized question.
+EXAMPLES:
+Input: how to redeploy
+Output: How do I redeploy an application?
 
-Question:
-${question}
-`,
+Input: how can we redeploy
+Output: How do I redeploy an application?
+
+Input: ${question}
+Output:
+      `,
     });
 
-    return response.text?.trim() || question;
-  } catch {
+    const text = response.text?.trim();
+
+    // safety fallback
+    if (!text || text.length < 3) return question;
+
+    return text;
+  } catch (err) {
+    console.error("normalizeQuestion error:", err);
     return question;
   }
 }
