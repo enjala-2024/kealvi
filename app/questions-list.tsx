@@ -19,6 +19,11 @@ export default function QuestionsList({
   initialQuestions: Question[];
   initialHasMore: boolean;
 }) {
+  const [userId, setUserId] = useState("");
+
+useEffect(() => {
+  setUserId(getUserId());
+}, []);
   const [questions, setQuestions] = useState(initialQuestions);
   const [draft, setDraft] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -199,6 +204,7 @@ async function deleteQuestion(id: string) {
     setLoading(false);
   }
 console.log(questions);
+console.log("Current user:", getUserId());
 const sortedQuestions = [...questions].sort((a, b) => {
   if (sortBy === "top") {
     return b.votes - a.votes;

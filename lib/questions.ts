@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 export async function getQuestionsPage(offset: number, limit: number) {
   const { data, error } = await supabase
     .from("questions")
-    .select("id, body, author,attachment_url, created_at, votes(count)")
+    .select("id, body, author,creator_id, attachment_url, created_at, votes(count)")
     .order("created_at", { ascending: false })
     .range(offset, offset + limit); // inclusive → asks for limit + 1 rows
 
@@ -16,6 +16,7 @@ export async function getQuestionsPage(offset: number, limit: number) {
     attachment_url: q.attachment_url,
     votes: q.votes?.[0]?.count ?? 0,
     created_at: q.created_at,
+    creator_id: q.creator_id,
   }));
 
 rows.sort((a, b) => b.votes - a.votes);
@@ -26,7 +27,7 @@ rows.sort((a, b) => b.votes - a.votes);
 export async function searchQuestions(q: string, limit: number) {
   const { data, error } = await supabase
     .from("questions")
-    .select("id, body, author, attachment_url,created_at, votes(count)")
+    .select("id, body, author, creator_id, attachment_url,created_at, votes(count)")
     .textSearch("body", q, { type: "websearch", config: "english" })
     .limit(limit);
 
@@ -45,6 +46,7 @@ export async function searchQuestions(q: string, limit: number) {
   votes: row.votes?.[0]?.count ?? 0,
   created_at: row.created_at,
   attachment_url: row.attachment_url,
+  creator_id: row.creator_id,
 }));
 
 rows.sort((a, b) => b.votes - a.votes);
