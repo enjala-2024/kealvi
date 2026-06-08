@@ -1,11 +1,12 @@
 "use client";
-
+import { getUserId } from "@/lib/getUserId";
 import { getVoterId } from "@/lib/voter";
 import { useState, useEffect, useRef } from "react";
 type Question = {
   id: string;
   body: string;
   author: string | null;
+  creator_id: string;
   votes: number;
   created_at: string;
    attachment_url?: string | null;
@@ -82,6 +83,7 @@ if (file) {
     attachmentUrl = uploaded.url;
   }
 }
+console.log("creator_id:", getUserId());
     const res = await fetch("/api/questions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -89,6 +91,7 @@ if (file) {
       body: JSON.stringify({
   body: draft,
   author: "Anonymous",
+  creator_id: getUserId(),
   attachment_url: attachmentUrl,
 }),
     });
@@ -170,7 +173,23 @@ setErrorMessage("");
     location.reload();
   }
 }
+async function deleteQuestion(id: string) {
+  const res = await fetch(`/api/questions/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      creator_id: getUserId(),
+    }),
+  });
 
+  if (res.ok) {
+    setQuestions((qs) =>
+      qs.filter((q) => q.id !== id)
+    );
+  }
+}
   async function loadMore() {
     setLoading(true);
     const res = await fetch(`/api/questions?offset=${questions.length}`);
@@ -334,7 +353,7 @@ const sortedQuestions = [...questions].sort((a, b) => {
     ▼
   </button>
 </div>
-            <div className="min-w-0 flex-1 pt-0.5">
+            {/*<div className="min-w-0 flex-1 pt-0.5">*/}
              {/* <p className="leading-snug">{q.body}</p>
               q.attachment_url && (
   <a
@@ -346,7 +365,7 @@ const sortedQuestions = [...questions].sort((a, b) => {
     View Attachment
   </a>
 )}*/}
-<p className="leading-snug">{q.body}</p>
+{/*<p className="leading-snug">{q.body}</p>
 
 {q.attachment_url && (
   <>
@@ -373,10 +392,61 @@ const sortedQuestions = [...questions].sort((a, b) => {
   <p className="mt-1.5 text-xs text-muted">{q.author}</p>
 )}*/}
 
-              {q.author && (
+             {/* {q.author && (
                 <p className="mt-1.5 text-xs text-muted">{q.author}</p>
               )}
-            </div>
+              {hydrated && q.creator_id === getUserId() && (
+  <button
+    onClick={() => deleteQuestion(q.id)}
+    className="ml-4 text-red-600 hover:text-red-700"
+      title="Delete Question"
+  >
+    🗑 Delete
+  </button>
+)}
+            </div>*/}
+            <div className="min-w-0 flex-1 pt-0.5 flex justify-between items-start">
+  <div>
+    <p className="leading-snug">{q.body}</p>
+
+    {q.attachment_url && (
+      <>
+        {q.attachment_url.toLowerCase().includes(".pdf") ? (
+          <a
+            href={q.attachment_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 block text-blue-600 underline"
+          >
+            📄 View PDF
+          </a>
+        ) : (
+          <img
+            src={q.attachment_url}
+            alt="attachment"
+            className="mt-2 max-h-64 rounded-lg border"
+          />
+        )}
+      </>
+    )}
+
+    {q.author && (
+      <p className="mt-1.5 text-xs text-muted">
+        {q.author}
+      </p>
+    )}
+  </div>
+
+  {hydrated && q.creator_id === getUserId() && (
+    <button
+      onClick={() => deleteQuestion(q.id)}
+      className="ml-4 rounded-full bg-blue-600 p-2 text-white hover:bg-blue-700"
+      title="Delete Question"
+    >
+      🗑️ DELETE
+    </button>
+  )}
+</div>
           </li>
         ))}
       </ul>

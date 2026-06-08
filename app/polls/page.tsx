@@ -6,8 +6,12 @@ import { getUserId } from "@/lib/getUserId";
 import { useState, useEffect } from "react";
 
 export default function PollsPage() {
-  const [polls, setPolls] = useState([]);
-  
+  const [polls, setPolls] = useState<any[]>([]);
+  const [userId, setUserId] = useState("");
+
+useEffect(() => {
+  setUserId(getUserId());
+}, []);
 const [question, setQuestion] = useState("");
 const [option1, setOption1] = useState("");
 const [option2, setOption2] = useState("");
@@ -29,6 +33,7 @@ const [userVotes, setUserVotes] = useState<Record<string, string>>({});
       body: JSON.stringify({
   question,
   options: [option1, option2],
+  creator_id: getUserId(),
 }),
     });
 
@@ -76,6 +81,67 @@ await fetch(`/api/polls/${pollId}/vote`, {
 
   loadPolls();
 };
+/*import { supabase } from "@/lib/supabase";*/
+
+/*async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+
+  const { creator_id } = await req.json();
+
+  const { data: poll } = await supabase
+    .from("polls")
+    .select("creator_id")
+    .eq("id", id)
+    .single();
+
+  if (!poll) {
+    return Response.json(
+      { error: "Poll not found" },
+      { status: 404 }
+    );
+  }
+
+  if (poll.creator_id !== creator_id) {
+    return Response.json(
+      { error: "Not allowed" },
+      { status: 403 }
+    );
+  }
+
+  const { error } = await supabase
+    .from("polls")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    return Response.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  }
+
+  return Response.json({ success: true });
+}*/
+async function deletePoll(id: string) {
+  const res = await fetch(`/api/polls/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      creator_id: getUserId(),
+    }),
+  });
+
+  if (res.ok) {
+    setPolls((polls) =>
+      polls.filter((p) => p.id !== id)
+    );
+  }
+}
 async function loadUserVotes() {
   const voterId = getUserId();
 
@@ -191,6 +257,15 @@ async function loadUserVotes() {
 })}
 
          </div>
+         {poll.creator_id === getUserId() && (
+  <button
+    onClick={() => deletePoll(poll.id)}
+    className="mt-3 text-sm text-red-600 hover:underline"
+  >
+    🗑 Delete Poll
+  </button>
+)}
+
     </div>
   ))}
 </div>

@@ -28,11 +28,11 @@ export async function GET() {
 
   //return Response.json(data);
 export async function POST(req: Request) {
-  const { question, options } = await req.json();
+  const { question, options,creator_id } = await req.json();
 
   const { data: poll, error: pollError } = await supabase
     .from("polls")
-    .insert({ question })
+    .insert({ question, creator_id })
     .select()
     .single();
 

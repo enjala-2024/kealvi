@@ -19,7 +19,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { body, author,attachment_url } = await req.json();
+  const { body, author,creator_id,attachment_url } = await req.json();
   const normalizedBody = await normalizeQuestion(body);
   /*const normalizedBody = await normalizeQuestion(body);
 const { data: existing } = await supabase
@@ -78,7 +78,7 @@ if (duplicate !== "NONE") {
 
   const { data, error } = await supabase
     .from("questions")
-    .insert({ body: normalizedBody, author , attachment_url,})
+    .insert({ body: normalizedBody, author, creator_id, attachment_url })
     .select()
     .single();
 

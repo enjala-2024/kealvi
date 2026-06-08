@@ -3,7 +3,11 @@ import { getQuestionsPage } from "@/lib/questions";
 
 // Render on every request (don't cache/prerender) so new questions show up.
 export const dynamic = "force-dynamic";
+/*const [userId, setUserId] = useState("");
 
+useEffect(() => {
+  setUserId(getUserId());
+}, []);*/
 const PAGE_SIZE = 10;
 
 // Server component — runs only on the server, awaits the data, renders to HTML.
@@ -22,7 +26,14 @@ export default async function Page() {
           Ask a question, upvote the ones you want answered.
         </p>
       </header>
-      <QuestionsList initialQuestions={questions} initialHasMore={hasMore} />
+      <QuestionsList
+        initialQuestions={questions.map((q: any) => ({
+          ...q,
+          // ensure Question.creator_id exists (use author.id if available)
+          creator_id: q.creator_id ?? q.author?.id ?? "",
+        }))}
+        initialHasMore={hasMore}
+      />
       <div className="mt-8">
   <a
     href="/polls"
